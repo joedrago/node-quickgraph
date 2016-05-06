@@ -359,7 +359,7 @@
         reader = new LineReader(inputFilename);
         lastX = 0;
         lineCount = 0;
-        while (line = reader.nextLine()) {
+        while ((line = reader.nextLine()) !== null) {
           lineCount += 1;
           if ((lineCount % 100000) === 0) {
             console.log("(" + inputFilename + ") Parsed " + lineCount + " lines.");
