@@ -15,6 +15,9 @@
     for (i = 0, len = ref.length; i < len; i++) {
       d = ref[i];
       dir = process.env[d];
+      if (dir == null) {
+        continue;
+      }
       filename = path.join(dir, '.quickgraphrc');
       if (fs.existsSync(filename)) {
         lines = String(fs.readFileSync(filename)).split(/[\r\n]/);

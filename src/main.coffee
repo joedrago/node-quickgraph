@@ -7,6 +7,7 @@ main = ->
 
   for d in ['HOME', 'USERPROFILE']
     dir = process.env[d]
+    continue unless dir?
     filename = path.join(dir, '.quickgraphrc')
     if fs.existsSync(filename)
       lines = String(fs.readFileSync(filename)).split(/[\r\n]/)
