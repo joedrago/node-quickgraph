@@ -1,0 +1,30 @@
+{
+  "name": "quickgraph",
+  "version": "0.0.1",
+  "description": "Commandline tool to quickly make graphs from arbitrary text files",
+  "main": "build/quickgraph.js",
+  "bin": {
+    "qg": "./bin/qg"
+  },
+  "scripts": {
+    "build": "cake build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joedrago/node-quickgraph.git"
+  },
+  "keywords": [
+    "graph",
+    "commandline"
+  ],
+  "author": "Joe Drago",
+  "license": "BSL-1.0",
+  "bugs": {
+    "url": "https://github.com/joedrago/node-quickgraph/issues"
+  },
+  "homepage": "https://github.com/joedrago/node-quickgraph",
+  "dependencies": {
+    "coffee-script": "^1.10.0",
+    "xregexp": "^3.1.0"
+  }
+}
