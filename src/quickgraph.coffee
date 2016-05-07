@@ -212,7 +212,21 @@ class QuickGraph
           rule.eval = @compile(evaluator)
 
         else
-          @inputFilenames.push arg
+          if matches = arg.match(/^@(.+)/)
+            responseFilename = matches[1]
+            if not fs.existsSync(responseFilename)
+              return @fail("Response filename '#{responseFilename}' does not exist")
+            responseFileReader = new LineReader(responseFilename)
+            extraArgs = []
+            while (argsLine = responseFileReader.nextLine()) != null
+              parsedArgs = @stringToArgs(argsLine)
+              for arg in parsedArgs
+                extraArgs.push arg
+            for arg in args
+              extraArgs.push arg
+            args = extraArgs
+          else
+            @inputFilenames.push arg
 
     return true
 

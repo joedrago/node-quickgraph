@@ -185,7 +185,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, arg, axis, consolidate, currentGraph, error, error1, evaluator, format, j, lastAxis, legend, len, output, regex, rule, title, xregex;
+      var alias, aliasArgs, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, j, l, lastAxis, legend, len, len1, len2, m, matches, output, parsedArgs, regex, responseFileReader, responseFilename, rule, title, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -284,7 +284,28 @@
             rule["eval"] = this.compile(evaluator);
             break;
           default:
-            this.inputFilenames.push(arg);
+            if (matches = arg.match(/^@(.+)/)) {
+              responseFilename = matches[1];
+              if (!fs.existsSync(responseFilename)) {
+                return this.fail("Response filename '" + responseFilename + "' does not exist");
+              }
+              responseFileReader = new LineReader(responseFilename);
+              extraArgs = [];
+              while ((argsLine = responseFileReader.nextLine()) !== null) {
+                parsedArgs = this.stringToArgs(argsLine);
+                for (l = 0, len1 = parsedArgs.length; l < len1; l++) {
+                  arg = parsedArgs[l];
+                  extraArgs.push(arg);
+                }
+              }
+              for (m = 0, len2 = args.length; m < len2; m++) {
+                arg = args[m];
+                extraArgs.push(arg);
+              }
+              args = extraArgs;
+            } else {
+              this.inputFilenames.push(arg);
+            }
         }
       }
       return true;
