@@ -1,0 +1,6 @@
+{
+  "name": "QuickGraph",
+  "tagline": "",
+  "body": "QuickGraph\r\n----------\r\n\r\nA commandline tool to quickly make graphs from arbitrary text files.\r\n\r\nReleased under the Boost Software License (Version 1.0).\r\n\r\nNote: I wouldn't use this just yet. It is probably littered with bugs and certainly incomplete ideas.\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
