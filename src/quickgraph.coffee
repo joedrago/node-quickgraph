@@ -16,7 +16,7 @@ class LineReader
         return null
       buffer = new Buffer @BUFFER_SIZE
       bytesRead = fs.readSync @fd, buffer, 0, @BUFFER_SIZE, null
-      @lines = String(buffer).split(/(?:\n|\r\n|\r)/g)
+      @lines = buffer.toString('utf8', 0, bytesRead).split(/(?:\n|\r\n|\r)/g)
       @lines[0] = @lineFragment + @lines[0]
       @lineFragment = @lines.pop() || ''
       if bytesRead != @BUFFER_SIZE
@@ -65,7 +65,7 @@ class QuickGraph
     @outputFilename = @DEFAULT_OUTPUT_FILENAME
 
   syntax: ->
-    console.error "Syntax: qg [options] logfile [... logfile]\n"
+    console.error "Syntax: qg [options] logfile [... logfile]"
     console.error "Options:"
     console.error "        -h,--help                  This help output"
     console.error "        -o,--output FILENAME       Output filename (default: #{@DEFAULT_OUTPUT_FILENAME})"
@@ -77,8 +77,7 @@ class QuickGraph
     console.error "        -l,--legend LEGEND         Sets the legend for the current axis"
     console.error "        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
-    console.error "        -f,--format FORMAT         Sets a C3 timeseries format for the X axis"
-    console.error "        -F,--format-function CODE  Sets the code used to interpret a JS Date object for the X axis"
+    console.error "        -f,--format CODE           Sets the code used to format an x axis value"
     return
 
   compile: (func) ->
@@ -117,6 +116,7 @@ class QuickGraph
         x: []
         y: []
       charts: []
+      xlabels: {}
     }
 
   newRule: (axis, index, regex) ->
@@ -190,12 +190,6 @@ class QuickGraph
             return @fail("-f requires an argument")
           currentGraph.format = format
 
-        when '-F', '--format-function'
-          currentGraph = @currentGraph()
-          unless formatFunc = args.shift()
-            return @fail("-F requires an argument")
-          currentGraph.formatFunc = formatFunc
-
         when '-l', '--legend'
           unless legend = args.shift()
             return @fail("-l requires an argument")
@@ -252,7 +246,8 @@ class QuickGraph
 
     flatRules = []
     for graph in @graphs
-      for axis, rules of graph.rules
+      for axis in ['x', 'y'] # Explicit ordering. x axis must always parse first
+        rules = graph.rules[axis]
         if rules.length == 0
           return @fail("Graph '#{graph.title}' has no #{axis} axis rules")
         for rule in rules
@@ -272,6 +267,8 @@ class QuickGraph
           if matches = XRegExp.exec(line, rule.regex)
             context = { V: matches[0], f: {} }
             for v, i in matches
+              if (matches.length == 2) and (i == 1)
+                context.V = v
               context["V#{i}"] = v
               context.f["V#{i}"] = parseFloat(v)
             for k, v of matches
@@ -281,6 +278,7 @@ class QuickGraph
             v = @evalInContext(rule.eval, context)
             if rule.axis == 'x'
               lastX = v
+              graph.xlabels[lastX] = context.V
             else
               @addToBucket(rule, lastX, v)
       console.log "(#{inputFilename}) Parsed #{lineCount} lines."
@@ -309,25 +307,22 @@ class QuickGraph
           columns[columnIndex].push v
 
       graph.chart =
+        zoom:
+          enabled: true
         data:
+          # type: 'bar'
           x: 'x'
           columns: columns
+        axis:
+          x:
+            tick: {}
 
       format = null
-      formatFunc = false
-      if graph.formatFunc
-        format = "function formatXAxis(t) { return #{graph.formatFunc} }"
-        formatFunc = true
-      else if graph.format
-        format = graph.format
-
-      if format
-        graph.chart.formatFunc = formatFunc
-        graph.chart.axis =
-          x:
-            type: 'timeseries'
-            tick:
-              format: format
+      if graph.format
+        graph.chart.axis.x.tick.format = "function formatXAxis(v) { return #{graph.format} }"
+      else
+        graph.chart.xlabels = graph.xlabels
+        graph.chart.axis.x.tick.format = "function formatXAxis(v) { return this.xlabels[v] }"
       # console.log JSON.stringify(graph.chart, null, 2)
 
     return true
@@ -358,9 +353,9 @@ class QuickGraph
 
           var chart = charts[i];
           chart.bindto = "#" + d.id;
-          if(chart.formatFunc) {
+          if(chart.axis.x.tick.format) {
             eval(chart.axis.x.tick.format);
-            chart.axis.x.tick.format = formatXAxis;
+            chart.axis.x.tick.format = formatXAxis.bind(chart);
           }
           c3.generate(chart);
         }

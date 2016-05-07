@@ -26,7 +26,7 @@
         }
         buffer = new Buffer(this.BUFFER_SIZE);
         bytesRead = fs.readSync(this.fd, buffer, 0, this.BUFFER_SIZE, null);
-        this.lines = String(buffer).split(/(?:\n|\r\n|\r)/g);
+        this.lines = buffer.toString('utf8', 0, bytesRead).split(/(?:\n|\r\n|\r)/g);
         this.lines[0] = this.lineFragment + this.lines[0];
         this.lineFragment = this.lines.pop() || '';
         if (bytesRead !== this.BUFFER_SIZE) {
@@ -105,7 +105,7 @@
     }
 
     QuickGraph.prototype.syntax = function() {
-      console.error("Syntax: qg [options] logfile [... logfile]\n");
+      console.error("Syntax: qg [options] logfile [... logfile]");
       console.error("Options:");
       console.error("        -h,--help                  This help output");
       console.error("        -o,--output FILENAME       Output filename (default: " + this.DEFAULT_OUTPUT_FILENAME + ")");
@@ -117,8 +117,7 @@
       console.error("        -l,--legend LEGEND         Sets the legend for the current axis");
       console.error("        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
-      console.error("        -f,--format FORMAT         Sets a C3 timeseries format for the X axis");
-      console.error("        -F,--format-function CODE  Sets the code used to interpret a JS Date object for the X axis");
+      console.error("        -f,--format CODE           Sets the code used to format an x axis value");
     };
 
     QuickGraph.prototype.compile = function(func) {
@@ -154,7 +153,8 @@
           x: [],
           y: []
         },
-        charts: []
+        charts: [],
+        xlabels: {}
       };
     };
 
@@ -185,7 +185,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, arg, axis, consolidate, currentGraph, error, error1, evaluator, format, formatFunc, j, lastAxis, legend, len, output, regex, rule, title, xregex;
+      var alias, aliasArgs, arg, axis, consolidate, currentGraph, error, error1, evaluator, format, j, lastAxis, legend, len, output, regex, rule, title, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -252,14 +252,6 @@
             }
             currentGraph.format = format;
             break;
-          case '-F':
-          case '--format-function':
-            currentGraph = this.currentGraph();
-            if (!(formatFunc = args.shift())) {
-              return this.fail("-F requires an argument");
-            }
-            currentGraph.formatFunc = formatFunc;
-            break;
           case '-l':
           case '--legend':
             if (!(legend = args.shift())) {
@@ -321,7 +313,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var axis, columnIndex, columns, context, flatRules, format, formatFunc, graph, i, inputFilename, j, k, l, lastX, len, len1, len10, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, x, xindices, xvalues;
+      var axis, columnIndex, columns, context, flatRules, format, graph, i, inputFilename, j, k, l, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -339,14 +331,15 @@
       ref1 = this.graphs;
       for (l = 0, len1 = ref1.length; l < len1; l++) {
         graph = ref1[l];
-        ref2 = graph.rules;
-        for (axis in ref2) {
-          rules = ref2[axis];
+        ref2 = ['x', 'y'];
+        for (m = 0, len2 = ref2.length; m < len2; m++) {
+          axis = ref2[m];
+          rules = graph.rules[axis];
           if (rules.length === 0) {
             return this.fail("Graph '" + graph.title + "' has no " + axis + " axis rules");
           }
-          for (m = 0, len2 = rules.length; m < len2; m++) {
-            rule = rules[m];
+          for (n = 0, len3 = rules.length; n < len3; n++) {
+            rule = rules[n];
             rule.axis = axis;
             rule.graph = graph;
             flatRules.push(rule);
@@ -354,8 +347,8 @@
         }
       }
       ref3 = this.inputFilenames;
-      for (n = 0, len3 = ref3.length; n < len3; n++) {
-        inputFilename = ref3[n];
+      for (o = 0, len4 = ref3.length; o < len4; o++) {
+        inputFilename = ref3[o];
         reader = new LineReader(inputFilename);
         lastX = 0;
         lineCount = 0;
@@ -364,15 +357,18 @@
           if ((lineCount % 100000) === 0) {
             console.log("(" + inputFilename + ") Parsed " + lineCount + " lines.");
           }
-          for (o = 0, len4 = flatRules.length; o < len4; o++) {
-            rule = flatRules[o];
+          for (p = 0, len5 = flatRules.length; p < len5; p++) {
+            rule = flatRules[p];
             if (matches = XRegExp.exec(line, rule.regex)) {
               context = {
                 V: matches[0],
                 f: {}
               };
-              for (i = p = 0, len5 = matches.length; p < len5; i = ++p) {
+              for (i = q = 0, len6 = matches.length; q < len6; i = ++q) {
                 v = matches[i];
+                if ((matches.length === 2) && (i === 1)) {
+                  context.V = v;
+                }
                 context["V" + i] = v;
                 context.f["V" + i] = parseFloat(v);
               }
@@ -386,6 +382,7 @@
               v = this.evalInContext(rule["eval"], context);
               if (rule.axis === 'x') {
                 lastX = v;
+                graph.xlabels[lastX] = context.V;
               } else {
                 this.addToBucket(rule, lastX, v);
               }
@@ -395,20 +392,20 @@
         console.log("(" + inputFilename + ") Parsed " + lineCount + " lines.");
       }
       ref4 = this.graphs;
-      for (q = 0, len6 = ref4.length; q < len6; q++) {
-        graph = ref4[q];
+      for (r = 0, len7 = ref4.length; r < len7; r++) {
+        graph = ref4[r];
         xindices = {};
         ref5 = graph.rules.y;
-        for (r = 0, len7 = ref5.length; r < len7; r++) {
-          rule = ref5[r];
+        for (s = 0, len8 = ref5.length; s < len8; s++) {
+          rule = ref5[s];
           for (k in rule.buckets) {
             xindices[k] = true;
           }
         }
         columns = [['x']];
         ref6 = graph.rules.y;
-        for (s = 0, len8 = ref6.length; s < len8; s++) {
-          rule = ref6[s];
+        for (t = 0, len9 = ref6.length; t < len9; t++) {
+          rule = ref6[t];
           if (this.isEmptyObject(rule.buckets)) {
             continue;
           }
@@ -419,13 +416,13 @@
         }).sort(function(a, b) {
           return a - b;
         });
-        for (t = 0, len9 = xvalues.length; t < len9; t++) {
-          x = xvalues[t];
+        for (u = 0, len10 = xvalues.length; u < len10; u++) {
+          x = xvalues[u];
           columnIndex = 0;
           columns[columnIndex].push(x);
           ref7 = graph.rules.y;
-          for (u = 0, len10 = ref7.length; u < len10; u++) {
-            rule = ref7[u];
+          for (w = 0, len11 = ref7.length; w < len11; w++) {
+            rule = ref7[w];
             if (this.isEmptyObject(rule.buckets)) {
               continue;
             }
@@ -438,29 +435,25 @@
           }
         }
         graph.chart = {
+          zoom: {
+            enabled: true
+          },
           data: {
             x: 'x',
             columns: columns
+          },
+          axis: {
+            x: {
+              tick: {}
+            }
           }
         };
         format = null;
-        formatFunc = false;
-        if (graph.formatFunc) {
-          format = "function formatXAxis(t) { return " + graph.formatFunc + " }";
-          formatFunc = true;
-        } else if (graph.format) {
-          format = graph.format;
-        }
-        if (format) {
-          graph.chart.formatFunc = formatFunc;
-          graph.chart.axis = {
-            x: {
-              type: 'timeseries',
-              tick: {
-                format: format
-              }
-            }
-          };
+        if (graph.format) {
+          graph.chart.axis.x.tick.format = "function formatXAxis(v) { return " + graph.format + " }";
+        } else {
+          graph.chart.xlabels = graph.xlabels;
+          graph.chart.axis.x.tick.format = "function formatXAxis(v) { return this.xlabels[v] }";
         }
       }
       return true;
@@ -474,7 +467,7 @@
         graph = ref[j];
         charts.push(graph.chart);
       }
-      html = "<html>\n<head>\n  <link href=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css\" rel=\"stylesheet\" type=\"text/css\">\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js\" charset=\"utf-8\"></script>\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js\"></script>\n</head>\n<body>\n<div id='charts'></div>\n<script>\n  var charts = " + (JSON.stringify(charts, null, 2)) + ";\n  var i;\n  for (i = 0; i < charts.length; i++) {\n    var d = document.createElement('div');\n    d.id = \"chart\" + i;\n    document.getElementById(\"charts\").appendChild(d);\n\n    var chart = charts[i];\n    chart.bindto = \"#\" + d.id;\n    if(chart.formatFunc) {\n      eval(chart.axis.x.tick.format);\n      chart.axis.x.tick.format = formatXAxis;\n    }\n    c3.generate(chart);\n  }\n</script>\n</body>\n</html>";
+      html = "<html>\n<head>\n  <link href=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css\" rel=\"stylesheet\" type=\"text/css\">\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js\" charset=\"utf-8\"></script>\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js\"></script>\n</head>\n<body>\n<div id='charts'></div>\n<script>\n  var charts = " + (JSON.stringify(charts, null, 2)) + ";\n  var i;\n  for (i = 0; i < charts.length; i++) {\n    var d = document.createElement('div');\n    d.id = \"chart\" + i;\n    document.getElementById(\"charts\").appendChild(d);\n\n    var chart = charts[i];\n    chart.bindto = \"#\" + d.id;\n    if(chart.axis.x.tick.format) {\n      eval(chart.axis.x.tick.format);\n      chart.axis.x.tick.format = formatXAxis.bind(chart);\n    }\n    c3.generate(chart);\n  }\n</script>\n</body>\n</html>";
       fs.writeFileSync(this.outputFilename, html);
       return console.log("Wrote " + this.outputFilename);
     };

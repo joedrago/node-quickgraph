@@ -1,0 +1,10 @@
+00:01:00 memory usage 21.3mb
+00:01:03 memory usage 22.0mb
+00:01:05 memory usage 21.3mb
+00:01:09 memory usage 23.1mb
+00:01:35 memory usage 24mb
+00:01:45 memory usage 25mb
+00:01:47 memory usage 27.3mb
+00:01:49 memory usage 27.9mb
+00:01:50 memory usage 28.3mb
+
