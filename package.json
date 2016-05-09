@@ -1,6 +1,6 @@
 {
   "name": "quickgraph",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Commandline tool to quickly make graphs from arbitrary text files",
   "main": "build/quickgraph.js",
   "bin": {

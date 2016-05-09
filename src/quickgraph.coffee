@@ -446,10 +446,32 @@ class QuickGraph
           font-size: 0.8em;
           color: #777777;
         }
+        .toggleNotes {
+          display: block;
+          width: 100%;
+          text-align: center;
+          font-size: 12px;
+          font-family: sans-serif;
+          cursor: pointer;
+          -webkit-user-select: none;
+        }
       </style>
       <body>
       <div id='charts'></div>
       <script>
+        var showNotes = true;
+        function toggleNotes() {
+          showNotes = !showNotes;
+          var elements = document.querySelectorAll('.c3-xgrid-lines');
+          for(var i=0; i<elements.length; i++) {
+            if(showNotes) {
+              elements[i].style.visibility = 'visible';
+            } else {
+              elements[i].style.visibility = 'hidden';
+            }
+          }
+        }
+
         var charts = #{JSON.stringify(charts)};
         var i;
         for (i = 0; i < charts.length; i++) {
@@ -466,6 +488,10 @@ class QuickGraph
             var d = document.createElement('div');
             d.id = "chart" + i;
             document.getElementById("charts").appendChild(d);
+
+            var a = document.createElement('a');
+            a.innerHTML = "<a class=\\"toggleNotes\\" onclick=\\"toggleNotes()\\">[Toggle Notes]</a>";
+            document.getElementById("charts").appendChild(a);
 
             chart.bindto = "#" + d.id;
             if(chart.axis.x.tick.format) {
