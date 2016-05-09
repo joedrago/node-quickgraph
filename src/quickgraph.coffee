@@ -87,28 +87,6 @@ class QuickGraph
   compile: (func) ->
     return CoffeeScript.compile(func, { bare: true })
 
-  # Adapted from NPM's string-argv
-  stringToArgs: (value) ->
-    # ([^\s'"]+(['"])([^\2]*?)\2) Match `text"quotes text"`
-
-    # [^\s'"] or Match if not a space ' or "
-
-    # (['"])([^\4]*?)\4 or Match "quoted text" without quotes
-    # `\2` and `\4` are a backreference to the quote style (' or ") captured
-    myRegexp = /([^\s'"]+(['"])([^\2]*?)\2)|[^\s'"]+|(['"])([^\4]*?)\4/gi
-    myString = value
-    myArray = []
-    loop
-      # Each call to exec returns the next regex match as an array
-      if match = myRegexp.exec(myString)
-        # Index 1 in the array is the captured group if it exists
-        # Index 0 is the matched text, which we use if no captured group exists
-        myArray.push(match[1] || match[5] || match[0])
-      else
-        break
-
-    return myArray
-
   fail: (reason) ->
     @error = reason
     return false
@@ -246,7 +224,7 @@ class QuickGraph
             responseFileReader = new LineReader(responseFilename)
             extraArgs = []
             while (argsLine = responseFileReader.nextLine()) != null
-              parsedArgs = @stringToArgs(argsLine)
+              parsedArgs = shellParse(argsLine)
               for arg in parsedArgs
                 extraArgs.push arg
             for arg in args

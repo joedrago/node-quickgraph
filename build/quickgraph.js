@@ -131,21 +131,6 @@
       });
     };
 
-    QuickGraph.prototype.stringToArgs = function(value) {
-      var match, myArray, myRegexp, myString;
-      myRegexp = /([^\s'"]+(['"])([^\2]*?)\2)|[^\s'"]+|(['"])([^\4]*?)\4/gi;
-      myString = value;
-      myArray = [];
-      while (true) {
-        if (match = myRegexp.exec(myString)) {
-          myArray.push(match[1] || match[5] || match[0]);
-        } else {
-          break;
-        }
-      }
-      return myArray;
-    };
-
     QuickGraph.prototype.fail = function(reason) {
       this.error = reason;
       return false;
@@ -327,7 +312,7 @@
               responseFileReader = new LineReader(responseFilename);
               extraArgs = [];
               while ((argsLine = responseFileReader.nextLine()) !== null) {
-                parsedArgs = this.stringToArgs(argsLine);
+                parsedArgs = shellParse(argsLine);
                 for (m = 0, len2 = parsedArgs.length; m < len2; m++) {
                   arg = parsedArgs[m];
                   extraArgs.push(arg);
