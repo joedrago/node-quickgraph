@@ -102,12 +102,14 @@
       this.defaultEval = this.compile("parseFloat(@V)");
       this.DEFAULT_OUTPUT_FILENAME = "quickgraph.html";
       this.outputFilename = this.DEFAULT_OUTPUT_FILENAME;
+      this.verboseEnabled = false;
     }
 
     QuickGraph.prototype.syntax = function() {
       console.error("Syntax: qg [options] logfile [... logfile]");
       console.error("Options:");
       console.error("        -h,--help                  This help output");
+      console.error("        -v,--verbose               Verbose mode");
       console.error("        -o,--output FILENAME       Output filename (default: " + this.DEFAULT_OUTPUT_FILENAME + ")");
       console.error("        -a,--alias ALIAS           Use named alias from your home directory's .quickgraphrc");
       console.error("        -g,--graph                 Begin a new graph. This is not necessary if you're only making one");
@@ -185,7 +187,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, j, l, lastAxis, legend, len, len1, len2, m, matches, output, parsedArgs, regex, responseFileReader, responseFilename, rule, title, xregex;
+      var alias, aliasArgs, aliasList, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -193,6 +195,11 @@
           case '--help':
             this.syntax();
             return false;
+          case '-v':
+          case '--verbose':
+            console.log("Verbose mode enabled.");
+            this.verboseEnabled = true;
+            break;
           case '-o':
           case '--output':
             if (!(output = args.shift())) {
@@ -203,14 +210,26 @@
           case '-a':
           case '--alias':
             if (!(alias = args.shift())) {
-              return this.fail("-a requires an argument");
+              aliasList = Object.keys(this.aliases).sort();
+              console.log("Aliases: (" + aliasList.length + ")");
+              for (j = 0, len = aliasList.length; j < len; j++) {
+                alias = aliasList[j];
+                spaces = "";
+                spacesToCreate = 20 - alias.length;
+                while (spacesToCreate > 0) {
+                  spacesToCreate -= 1;
+                  spaces += " ";
+                }
+                console.log("* " + alias + spaces + this.aliases[alias]);
+              }
+              return false;
             }
             if (!this.aliases.hasOwnProperty(alias)) {
               return this.fail("Unknown alias '" + alias + "'");
             }
             aliasArgs = this.stringToArgs(this.aliases[alias]);
-            for (j = 0, len = args.length; j < len; j++) {
-              arg = args[j];
+            for (l = 0, len1 = args.length; l < len1; l++) {
+              arg = args[l];
               aliasArgs.push(arg);
             }
             args = aliasArgs;
@@ -293,13 +312,13 @@
               extraArgs = [];
               while ((argsLine = responseFileReader.nextLine()) !== null) {
                 parsedArgs = this.stringToArgs(argsLine);
-                for (l = 0, len1 = parsedArgs.length; l < len1; l++) {
-                  arg = parsedArgs[l];
+                for (m = 0, len2 = parsedArgs.length; m < len2; m++) {
+                  arg = parsedArgs[m];
                   extraArgs.push(arg);
                 }
               }
-              for (m = 0, len2 = args.length; m < len2; m++) {
-                arg = args[m];
+              for (n = 0, len3 = args.length; n < len3; n++) {
+                arg = args[n];
                 extraArgs.push(arg);
               }
               args = extraArgs;
@@ -400,7 +419,14 @@
                   context.f[k] = parseFloat(v);
                 }
               }
+              if (this.verboseEnabled) {
+                console.log("parsed " + rule.axis + " rule, context: ", context);
+                console.log("Running JS:\n" + rule["eval"]);
+              }
               v = this.evalInContext(rule["eval"], context);
+              if (this.verboseEnabled) {
+                console.log("result: " + v);
+              }
               if (rule.axis === 'x') {
                 lastX = v;
                 graph.xlabels[lastX] = context.V;
@@ -454,6 +480,9 @@
             }
             columns[columnIndex].push(v);
           }
+        }
+        if (this.verboseEnabled) {
+          console.log("(graph: " + graph.title + ") Found " + xvalues.length + " values for the X axis.");
         }
         graph.chart = {
           zoom: {

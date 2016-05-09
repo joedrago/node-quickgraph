@@ -63,11 +63,13 @@ class QuickGraph
     @defaultEval = @compile("parseFloat(@V)")
     @DEFAULT_OUTPUT_FILENAME = "quickgraph.html"
     @outputFilename = @DEFAULT_OUTPUT_FILENAME
+    @verboseEnabled = false
 
   syntax: ->
     console.error "Syntax: qg [options] logfile [... logfile]"
     console.error "Options:"
     console.error "        -h,--help                  This help output"
+    console.error "        -v,--verbose               Verbose mode"
     console.error "        -o,--output FILENAME       Output filename (default: #{@DEFAULT_OUTPUT_FILENAME})"
     console.error "        -a,--alias ALIAS           Use named alias from your home directory's .quickgraphrc"
     console.error "        -g,--graph                 Begin a new graph. This is not necessary if you're only making one"
@@ -147,6 +149,10 @@ class QuickGraph
           @syntax()
           return false
 
+        when '-v', '--verbose'
+          console.log "Verbose mode enabled."
+          @verboseEnabled = true
+
         when '-o', '--output'
           unless output = args.shift()
             return @fail("-o requires an argument")
@@ -154,7 +160,16 @@ class QuickGraph
 
         when '-a', '--alias'
           unless alias = args.shift()
-            return @fail("-a requires an argument")
+            aliasList = Object.keys(@aliases).sort()
+            console.log "Aliases: (#{aliasList.length})"
+            for alias in aliasList
+              spaces = ""
+              spacesToCreate = 20 - alias.length
+              while spacesToCreate > 0
+                spacesToCreate -= 1
+                spaces += " "
+              console.log "* #{alias}#{spaces}#{@aliases[alias]}"
+            return false
           if not @aliases.hasOwnProperty(alias)
             return @fail("Unknown alias '#{alias}'")
           aliasArgs = @stringToArgs(@aliases[alias])
@@ -289,7 +304,12 @@ class QuickGraph
               if k.match(/^[A-Z]/)
                 context[k] = v
                 context.f[k] = parseFloat(v)
+            if @verboseEnabled
+              console.log "parsed #{rule.axis} rule, context: ", context
+              console.log "Running JS:\n#{rule.eval}"
             v = @evalInContext(rule.eval, context)
+            if @verboseEnabled
+              console.log "result: #{v}"
             if rule.axis == 'x'
               lastX = v
               graph.xlabels[lastX] = context.V
@@ -319,6 +339,9 @@ class QuickGraph
           if rule.buckets[x]?
             v = rule.buckets[x].consolidate(rule.consolidate)
           columns[columnIndex].push v
+
+      if @verboseEnabled
+        console.log "(graph: #{graph.title}) Found #{xvalues.length} values for the X axis."
 
       graph.chart =
         zoom:

@@ -10,7 +10,9 @@
 
   main = function() {
     var aliases, args, d, dir, err, filename, i, j, len, len1, line, lines, matches, qg, ref, ref1;
-    aliases = {};
+    aliases = {
+      date: '-e "+new Date(@V)"'
+    };
     ref = ['HOME', 'USERPROFILE'];
     for (i = 0, len = ref.length; i < len; i++) {
       d = ref[i];

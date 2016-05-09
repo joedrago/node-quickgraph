@@ -3,7 +3,9 @@ path = require 'path'
 QuickGraph = require './quickgraph'
 
 main = ->
-  aliases = {}
+  aliases = {
+    date: '-e "+new Date(@V)"'
+  }
 
   for d in ['HOME', 'USERPROFILE']
     dir = process.env[d]

@@ -28,19 +28,19 @@ Syntax
 
 Data (example1.txt):
 
-    20150416 5
-    20150417 6
-    20150418 7
-    20150419 6
-    20150420 5
-    20150421 6
-    20150422 8
-    20150423 4
-    20150424 3
+    2015-12-16 5
+    2015-12-17 6
+    2015-12-18 7
+    2015-12-19 6
+    2015-12-20 5
+    2015-12-21 6
+    2015-12-22 8
+    2015-12-23 4
+    2015-12-24 3
 
 Commandline:
 
-    qg example1.txt -x "^\d+" -y "\d+$"
+    qg example1.txt -x "^[-\d]+" -a date -y "\d+$"
 
 ![Example1](https://raw.githubusercontent.com/joedrago/node-quickgraph/master/examples/ex1.png)
 
