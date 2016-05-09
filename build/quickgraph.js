@@ -122,6 +122,7 @@
       console.error("        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
       console.error("        -f,--format CODE           Sets the code used to format an x axis value");
+      console.error("        --height                   Sets the graph's height. Defaults to 480.");
     };
 
     QuickGraph.prototype.compile = function(func) {
@@ -158,7 +159,10 @@
           y: []
         },
         charts: [],
-        xlabels: {}
+        xlabels: {},
+        size: {
+          height: 480
+        }
       };
     };
 
@@ -189,7 +193,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, aliasList, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, xregex;
+      var alias, aliasArgs, aliasList, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -250,6 +254,13 @@
               return this.fail("-t requires an argument");
             }
             currentGraph.title = title;
+            break;
+          case '--height':
+            currentGraph = this.currentGraph();
+            if (!(height = args.shift())) {
+              return this.fail("--height requires an argument");
+            }
+            currentGraph.size.height = height;
             break;
           case '-x':
           case '-y':
@@ -501,7 +512,8 @@
             x: {
               tick: {}
             }
-          }
+          },
+          size: graph.size
         };
         format = null;
         if (graph.format) {

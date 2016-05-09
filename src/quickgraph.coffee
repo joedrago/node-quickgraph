@@ -81,6 +81,7 @@ class QuickGraph
     console.error "        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
     console.error "        -f,--format CODE           Sets the code used to format an x axis value"
+    console.error "        --height                   Sets the graph's height. Defaults to 480."
     return
 
   compile: (func) ->
@@ -120,6 +121,8 @@ class QuickGraph
         y: []
       charts: []
       xlabels: {}
+      size:
+        height: 480
     }
 
   newRule: (axis, index, regex) ->
@@ -188,6 +191,12 @@ class QuickGraph
           unless title = args.shift()
             return @fail("-t requires an argument")
           currentGraph.title = title
+
+        when '--height'
+          currentGraph = @currentGraph()
+          unless height = args.shift()
+            return @fail("--height requires an argument")
+          currentGraph.size.height = height
 
         when '-x', '-y'
           axis = arg.charAt(1)
@@ -356,6 +365,7 @@ class QuickGraph
         axis:
           x:
             tick: {}
+        size: graph.size
 
       format = null
       if graph.format
