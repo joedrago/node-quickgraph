@@ -96,7 +96,8 @@ class QuickGraph
 
   newGraph: (index) ->
     return {
-      title: "Graph #{index}"
+      index: index
+      title: ""
       rules:
         x: []
         y: []
@@ -290,7 +291,7 @@ class QuickGraph
       for axis in ['x', 'y'] # Explicit ordering. x axis must always parse first
         rules = graph.rules[axis]
         if rules.length == 0
-          return @fail("Graph '#{graph.title}' has no #{axis} axis rules")
+          return @fail("Graph ##{graph.index} ('#{graph.title}') has no #{axis} axis rules")
         for rule in rules
           rule.axis = axis
           rule.graph = graph
@@ -333,9 +334,16 @@ class QuickGraph
 
     for graph in @graphs
       xindices = {}
+      hasData = false
       for rule in graph.rules.y
         for k of rule.buckets
           xindices[k] = true
+          hasData = true
+
+      if not hasData
+        console.log "Skipping empty graph ##{graph.index} ('#{graph.title}')"
+        graph.empty = true
+        continue
 
       columns = [ ['x'] ]
       colors = {}
@@ -361,6 +369,7 @@ class QuickGraph
         console.log "(graph: #{graph.title}) Found #{xvalues.length} values for the X axis."
 
       graph.chart =
+        title: graph.title
         zoom:
           enabled: true
         data:
@@ -387,7 +396,15 @@ class QuickGraph
     charts = []
 
     for graph in @graphs
-      charts.push graph.chart
+      if graph.empty
+        legends = (rule.legend for rule in graph.rules.y)
+        charts.push {
+          empty: true
+          title: graph.title
+          legends: legends.join(", ")
+        }
+      else
+        charts.push graph.chart
 
     html = """
       <html>
@@ -396,26 +413,50 @@ class QuickGraph
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js" charset="utf-8"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
       </head>
+      <style>
+        .title {
+          font-size: 1.4em;
+          font-style: italic;
+          margin-top: 20px;
+          margin-bottom: 5px;
+        }
+        .skipped {
+          margin: 5px;
+          font-style: italic;
+          font-size: 0.8em;
+          color: #777777;
+        }
+      </style>
       <body>
       <div id='charts'></div>
       <script>
-        var charts = #{JSON.stringify(charts, null, 2)};
+        var charts = #{JSON.stringify(charts)};
         var i;
         for (i = 0; i < charts.length; i++) {
-          var d = document.createElement('div');
-          d.id = "chart" + i;
-          document.getElementById("charts").appendChild(d);
-
           var chart = charts[i];
-          chart.bindto = "#" + d.id;
-          if(chart.axis.x.tick.format) {
-            var formatXAxis = null;
-            eval(chart.axis.x.tick.format);
-            if(formatXAxis) {
-              chart.axis.x.tick.format = formatXAxis.bind(chart);
+          if(chart.empty) {
+            var d = document.createElement('div');
+            d.innerHTML = "<div class=\\"skipped\\">Skipped empty graph " + chart.title + "; contained " + chart.legends + "</div>";
+            document.getElementById("charts").appendChild(d);
+          } else {
+            var titleDiv = document.createElement('div');
+            titleDiv.innerHTML = "<div class=\\"title\\">"+chart.title+"</div>";
+            document.getElementById("charts").appendChild(titleDiv);
+
+            var d = document.createElement('div');
+            d.id = "chart" + i;
+            document.getElementById("charts").appendChild(d);
+
+            chart.bindto = "#" + d.id;
+            if(chart.axis.x.tick.format) {
+              var formatXAxis = null;
+              eval(chart.axis.x.tick.format);
+              if(formatXAxis) {
+                chart.axis.x.tick.format = formatXAxis.bind(chart);
+              }
             }
+            c3.generate(chart);
           }
-          c3.generate(chart);
         }
       </script>
       </body>

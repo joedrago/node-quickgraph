@@ -141,7 +141,8 @@
 
     QuickGraph.prototype.newGraph = function(index) {
       return {
-        title: "Graph " + index,
+        index: index,
+        title: "",
         rules: {
           x: [],
           y: []
@@ -380,7 +381,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var axis, colors, columnIndex, columns, context, flatRules, graph, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
+      var axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -403,7 +404,7 @@
           axis = ref2[m];
           rules = graph.rules[axis];
           if (rules.length === 0) {
-            return this.fail("Graph '" + graph.title + "' has no " + axis + " axis rules");
+            return this.fail("Graph #" + graph.index + " ('" + graph.title + "') has no " + axis + " axis rules");
           }
           for (n = 0, len3 = rules.length; n < len3; n++) {
             rule = rules[n];
@@ -471,12 +472,19 @@
       for (r = 0, len7 = ref4.length; r < len7; r++) {
         graph = ref4[r];
         xindices = {};
+        hasData = false;
         ref5 = graph.rules.y;
         for (s = 0, len8 = ref5.length; s < len8; s++) {
           rule = ref5[s];
           for (k in rule.buckets) {
             xindices[k] = true;
+            hasData = true;
           }
+        }
+        if (!hasData) {
+          console.log("Skipping empty graph #" + graph.index + " ('" + graph.title + "')");
+          graph.empty = true;
+          continue;
         }
         columns = [['x']];
         colors = {};
@@ -518,6 +526,7 @@
           console.log("(graph: " + graph.title + ") Found " + xvalues.length + " values for the X axis.");
         }
         graph.chart = {
+          title: graph.title,
           zoom: {
             enabled: true
           },
@@ -544,14 +553,32 @@
     };
 
     QuickGraph.prototype.generate = function() {
-      var charts, graph, html, j, len, ref;
+      var charts, graph, html, j, legends, len, ref, rule;
       charts = [];
       ref = this.graphs;
       for (j = 0, len = ref.length; j < len; j++) {
         graph = ref[j];
-        charts.push(graph.chart);
+        if (graph.empty) {
+          legends = (function() {
+            var l, len1, ref1, results;
+            ref1 = graph.rules.y;
+            results = [];
+            for (l = 0, len1 = ref1.length; l < len1; l++) {
+              rule = ref1[l];
+              results.push(rule.legend);
+            }
+            return results;
+          })();
+          charts.push({
+            empty: true,
+            title: graph.title,
+            legends: legends.join(", ")
+          });
+        } else {
+          charts.push(graph.chart);
+        }
       }
-      html = "<html>\n<head>\n  <link href=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css\" rel=\"stylesheet\" type=\"text/css\">\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js\" charset=\"utf-8\"></script>\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js\"></script>\n</head>\n<body>\n<div id='charts'></div>\n<script>\n  var charts = " + (JSON.stringify(charts, null, 2)) + ";\n  var i;\n  for (i = 0; i < charts.length; i++) {\n    var d = document.createElement('div');\n    d.id = \"chart\" + i;\n    document.getElementById(\"charts\").appendChild(d);\n\n    var chart = charts[i];\n    chart.bindto = \"#\" + d.id;\n    if(chart.axis.x.tick.format) {\n      var formatXAxis = null;\n      eval(chart.axis.x.tick.format);\n      if(formatXAxis) {\n        chart.axis.x.tick.format = formatXAxis.bind(chart);\n      }\n    }\n    c3.generate(chart);\n  }\n</script>\n</body>\n</html>";
+      html = "<html>\n<head>\n  <link href=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css\" rel=\"stylesheet\" type=\"text/css\">\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js\" charset=\"utf-8\"></script>\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js\"></script>\n</head>\n<style>\n  .title {\n    font-size: 1.4em;\n    font-style: italic;\n    margin-top: 20px;\n    margin-bottom: 5px;\n  }\n  .skipped {\n    margin: 5px;\n    font-style: italic;\n    font-size: 0.8em;\n    color: #777777;\n  }\n</style>\n<body>\n<div id='charts'></div>\n<script>\n  var charts = " + (JSON.stringify(charts)) + ";\n  var i;\n  for (i = 0; i < charts.length; i++) {\n    var chart = charts[i];\n    if(chart.empty) {\n      var d = document.createElement('div');\n      d.innerHTML = \"<div class=\\\"skipped\\\">Skipped empty graph \" + chart.title + \"; contained \" + chart.legends + \"</div>\";\n      document.getElementById(\"charts\").appendChild(d);\n    } else {\n      var titleDiv = document.createElement('div');\n      titleDiv.innerHTML = \"<div class=\\\"title\\\">\"+chart.title+\"</div>\";\n      document.getElementById(\"charts\").appendChild(titleDiv);\n\n      var d = document.createElement('div');\n      d.id = \"chart\" + i;\n      document.getElementById(\"charts\").appendChild(d);\n\n      chart.bindto = \"#\" + d.id;\n      if(chart.axis.x.tick.format) {\n        var formatXAxis = null;\n        eval(chart.axis.x.tick.format);\n        if(formatXAxis) {\n          chart.axis.x.tick.format = formatXAxis.bind(chart);\n        }\n      }\n      c3.generate(chart);\n    }\n  }\n</script>\n</body>\n</html>";
       fs.writeFileSync(this.outputFilename, html);
       return console.log("Wrote " + this.outputFilename);
     };
