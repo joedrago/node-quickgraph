@@ -488,7 +488,6 @@
           }
           columns.push([rule.legend]);
           if (rule.color != null) {
-            console.log("bringing yellow in");
             colors[rule.legend] = rule.color;
           }
         }

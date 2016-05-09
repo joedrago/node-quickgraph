@@ -343,7 +343,6 @@ class QuickGraph
         continue if @isEmptyObject(rule.buckets)
         columns.push [rule.legend]
         if rule.color?
-          console.log "bringing yellow in"
           colors[rule.legend] = rule.color
 
       xvalues = Object.keys(xindices).map( (e) -> parseFloat(e) ).sort (a, b) -> a - b
