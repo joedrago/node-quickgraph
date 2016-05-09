@@ -13,6 +13,7 @@ Syntax
     Syntax: qg [options] logfile [... logfile]
     Options:
             -h,--help                  This help output
+            -v,--verbose               Verbose mode
             -o,--output FILENAME       Output filename (default: quickgraph.html)
             -a,--alias ALIAS           Use named alias from your home directory's .quickgraphrc
             -g,--graph                 Begin a new graph. This is not necessary if you're only making one
@@ -23,6 +24,9 @@ Syntax
             -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)
             -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples
             -f,--format CODE           Sets the code used to format an x axis value
+            --width                    Sets the graph's width. Defaults to use the whole width of the browser.
+            --height                   Sets the graph's height. Defaults to 480.
+            -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file
 
 *Example 1*
 

@@ -122,7 +122,9 @@
       console.error("        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
       console.error("        -f,--format CODE           Sets the code used to format an x axis value");
+      console.error("        --width                    Sets the graph's width. Defaults to use the whole width of the browser.");
       console.error("        --height                   Sets the graph's height. Defaults to 480.");
+      console.error("        -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file");
     };
 
     QuickGraph.prototype.compile = function(func) {
@@ -178,7 +180,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, aliasList, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, xregex;
+      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, width, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -239,6 +241,13 @@
               return this.fail("-t requires an argument");
             }
             currentGraph.title = title;
+            break;
+          case '--width':
+            currentGraph = this.currentGraph();
+            if (!(width = args.shift())) {
+              return this.fail("--width requires an argument");
+            }
+            currentGraph.size.width = width;
             break;
           case '--height':
             currentGraph = this.currentGraph();
@@ -312,10 +321,17 @@
               responseFileReader = new LineReader(responseFilename);
               extraArgs = [];
               while ((argsLine = responseFileReader.nextLine()) !== null) {
-                parsedArgs = shellParse(argsLine);
-                for (m = 0, len2 = parsedArgs.length; m < len2; m++) {
-                  arg = parsedArgs[m];
-                  extraArgs.push(arg);
+                if (matches = argsLine.match(/^\s*-A\s+(.+)$/)) {
+                  aliasLine = matches[1];
+                  if (matches = aliasLine.match(/^(\S+)\s+(.+)$/)) {
+                    this.aliases[matches[1]] = matches[2];
+                  }
+                } else {
+                  parsedArgs = shellParse(argsLine);
+                  for (m = 0, len2 = parsedArgs.length; m < len2; m++) {
+                    arg = parsedArgs[m];
+                    extraArgs.push(arg);
+                  }
                 }
               }
               for (n = 0, len3 = args.length; n < len3; n++) {
@@ -354,7 +370,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var axis, columnIndex, columns, context, flatRules, format, graph, i, inputFilename, j, k, l, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
+      var axis, columnIndex, columns, context, flatRules, graph, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -392,6 +408,7 @@
         inputFilename = ref3[o];
         reader = new LineReader(inputFilename);
         lastX = 0;
+        lastLabel = "";
         lineCount = 0;
         while ((line = reader.nextLine()) !== null) {
           lineCount += 1;
@@ -430,8 +447,9 @@
               }
               if (rule.axis === 'x') {
                 lastX = v;
-                graph.xlabels[lastX] = context.V;
+                lastLabel = context.V;
               } else {
+                rule.graph.xlabels[lastX] = lastLabel;
                 this.addToBucket(rule, lastX, v);
               }
             }
@@ -500,7 +518,6 @@
           },
           size: graph.size
         };
-        format = null;
         if (graph.format) {
           graph.chart.axis.x.tick.format = "function formatXAxis(v) { return " + graph.format + " }";
         } else {
@@ -519,7 +536,7 @@
         graph = ref[j];
         charts.push(graph.chart);
       }
-      html = "<html>\n<head>\n  <link href=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css\" rel=\"stylesheet\" type=\"text/css\">\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js\" charset=\"utf-8\"></script>\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js\"></script>\n</head>\n<body>\n<div id='charts'></div>\n<script>\n  var charts = " + (JSON.stringify(charts, null, 2)) + ";\n  var i;\n  for (i = 0; i < charts.length; i++) {\n    var d = document.createElement('div');\n    d.id = \"chart\" + i;\n    document.getElementById(\"charts\").appendChild(d);\n\n    var chart = charts[i];\n    chart.bindto = \"#\" + d.id;\n    if(chart.axis.x.tick.format) {\n      eval(chart.axis.x.tick.format);\n      chart.axis.x.tick.format = formatXAxis.bind(chart);\n    }\n    c3.generate(chart);\n  }\n</script>\n</body>\n</html>";
+      html = "<html>\n<head>\n  <link href=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css\" rel=\"stylesheet\" type=\"text/css\">\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js\" charset=\"utf-8\"></script>\n  <script src=\"https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js\"></script>\n</head>\n<body>\n<div id='charts'></div>\n<script>\n  var charts = " + (JSON.stringify(charts, null, 2)) + ";\n  var i;\n  for (i = 0; i < charts.length; i++) {\n    var d = document.createElement('div');\n    d.id = \"chart\" + i;\n    document.getElementById(\"charts\").appendChild(d);\n\n    var chart = charts[i];\n    chart.bindto = \"#\" + d.id;\n    if(chart.axis.x.tick.format) {\n      var formatXAxis = null;\n      eval(chart.axis.x.tick.format);\n      if(formatXAxis) {\n        chart.axis.x.tick.format = formatXAxis.bind(chart);\n      }\n    }\n    c3.generate(chart);\n  }\n</script>\n</body>\n</html>";
       fs.writeFileSync(this.outputFilename, html);
       return console.log("Wrote " + this.outputFilename);
     };

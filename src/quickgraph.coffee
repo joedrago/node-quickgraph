@@ -81,7 +81,9 @@ class QuickGraph
     console.error "        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
     console.error "        -f,--format CODE           Sets the code used to format an x axis value"
+    console.error "        --width                    Sets the graph's width. Defaults to use the whole width of the browser."
     console.error "        --height                   Sets the graph's height. Defaults to 480."
+    console.error "        -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file"
     return
 
   compile: (func) ->
@@ -170,6 +172,12 @@ class QuickGraph
             return @fail("-t requires an argument")
           currentGraph.title = title
 
+        when '--width'
+          currentGraph = @currentGraph()
+          unless width = args.shift()
+            return @fail("--width requires an argument")
+          currentGraph.size.width = width
+
         when '--height'
           currentGraph = @currentGraph()
           unless height = args.shift()
@@ -224,9 +232,15 @@ class QuickGraph
             responseFileReader = new LineReader(responseFilename)
             extraArgs = []
             while (argsLine = responseFileReader.nextLine()) != null
-              parsedArgs = shellParse(argsLine)
-              for arg in parsedArgs
-                extraArgs.push arg
+              if matches = argsLine.match(/^\s*-A\s+(.+)$/)
+                # Create new alias
+                aliasLine = matches[1]
+                if matches = aliasLine.match(/^(\S+)\s+(.+)$/)
+                  @aliases[matches[1]] = matches[2]
+              else
+                parsedArgs = shellParse(argsLine)
+                for arg in parsedArgs
+                  extraArgs.push arg
             for arg in args
               extraArgs.push arg
             args = extraArgs
@@ -277,6 +291,7 @@ class QuickGraph
     for inputFilename in @inputFilenames
       reader = new LineReader(inputFilename)
       lastX = 0
+      lastLabel = ""
       lineCount = 0
       while (line = reader.nextLine()) != null
         lineCount += 1
@@ -302,8 +317,9 @@ class QuickGraph
               console.log "result: #{v}"
             if rule.axis == 'x'
               lastX = v
-              graph.xlabels[lastX] = context.V
+              lastLabel = context.V
             else
+              rule.graph.xlabels[lastX] = lastLabel
               @addToBucket(rule, lastX, v)
       console.log "(#{inputFilename}) Parsed #{lineCount} lines."
 
@@ -345,7 +361,6 @@ class QuickGraph
             tick: {}
         size: graph.size
 
-      format = null
       if graph.format
         graph.chart.axis.x.tick.format = "function formatXAxis(v) { return #{graph.format} }"
       else
@@ -382,8 +397,11 @@ class QuickGraph
           var chart = charts[i];
           chart.bindto = "#" + d.id;
           if(chart.axis.x.tick.format) {
+            var formatXAxis = null;
             eval(chart.axis.x.tick.format);
-            chart.axis.x.tick.format = formatXAxis.bind(chart);
+            if(formatXAxis) {
+              chart.axis.x.tick.format = formatXAxis.bind(chart);
+            }
           }
           c3.generate(chart);
         }
