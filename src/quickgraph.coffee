@@ -1,6 +1,7 @@
 fs = require 'fs'
 CoffeeScript = require 'coffee-script'
 XRegExp = require 'xregexp'
+shellParse = require('shell-quote').parse
 
 class LineReader
   constructor: (@filename) ->
@@ -172,7 +173,9 @@ class QuickGraph
             return false
           if not @aliases.hasOwnProperty(alias)
             return @fail("Unknown alias '#{alias}'")
-          aliasArgs = @stringToArgs(@aliases[alias])
+          aliasArgs = shellParse(@aliases[alias])
+          if @verboseEnabled
+            console.log "expanded alias '#{alias}': ", aliasArgs
           for arg in args
             aliasArgs.push arg
           args = aliasArgs
