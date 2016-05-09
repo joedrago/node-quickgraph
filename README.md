@@ -20,10 +20,11 @@ Syntax
             -t,--title TITLE           Sets the title of the current graph
             -x REGEX                   Matches a new X axis value, parsed by -e, formatted with -f or -F
             -y REGEX                   Matches a new Y axis value, parsed by -e, formatted with -f or -F
+            -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)
             -l,--legend LEGEND         Sets the legend for the current axis
-            -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)
             -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples
             -f,--format CODE           Sets the code used to format an x axis value
+            --consolidate FUNC         Sets the consolidation function for the current axis (sum, count, avg, min, max, last)
             --width                    Sets the graph's width. Defaults to use the whole width of the browser.
             --height                   Sets the graph's height. Defaults to 480.
             -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file

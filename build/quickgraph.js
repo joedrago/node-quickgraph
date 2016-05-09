@@ -118,10 +118,11 @@
       console.error("        -t,--title TITLE           Sets the title of the current graph");
       console.error("        -x REGEX                   Matches a new X axis value, parsed by -e, formatted with -f or -F");
       console.error("        -y REGEX                   Matches a new Y axis value, parsed by -e, formatted with -f or -F");
+      console.error("        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)");
       console.error("        -l,--legend LEGEND         Sets the legend for the current axis");
-      console.error("        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
       console.error("        -f,--format CODE           Sets the code used to format an x axis value");
+      console.error("        --consolidate FUNC         Sets the consolidation function for the current axis (sum, count, avg, min, max, last)");
       console.error("        --width                    Sets the graph's width. Defaults to use the whole width of the browser.");
       console.error("        --height                   Sets the graph's height. Defaults to 480.");
       console.error("        -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file");
@@ -180,7 +181,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, width, xregex;
+      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, color, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, width, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -292,12 +293,21 @@
             rule.legend = legend;
             break;
           case '-c':
-          case '--consolidate':
-            if (!(consolidate = args.shift())) {
+          case '--color':
+            if (!(color = args.shift())) {
               return this.fail("-c requires an argument");
             }
             if (!(rule = this.currentRule(lastAxis))) {
               return this.fail("-c must modify an axis created with -x or -y");
+            }
+            rule.color = color;
+            break;
+          case '--consolidate':
+            if (!(consolidate = args.shift())) {
+              return this.fail("--consolidate requires an argument");
+            }
+            if (!(rule = this.currentRule(lastAxis))) {
+              return this.fail("--consolidate must modify an axis created with -x or -y");
             }
             rule.consolidate = consolidate;
             break;
@@ -370,7 +380,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var axis, columnIndex, columns, context, flatRules, graph, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
+      var axis, colors, columnIndex, columns, context, flatRules, graph, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -469,6 +479,7 @@
           }
         }
         columns = [['x']];
+        colors = {};
         ref6 = graph.rules.y;
         for (t = 0, len9 = ref6.length; t < len9; t++) {
           rule = ref6[t];
@@ -476,6 +487,10 @@
             continue;
           }
           columns.push([rule.legend]);
+          if (rule.color != null) {
+            console.log("bringing yellow in");
+            colors[rule.legend] = rule.color;
+          }
         }
         xvalues = Object.keys(xindices).map(function(e) {
           return parseFloat(e);
@@ -509,7 +524,8 @@
           },
           data: {
             x: 'x',
-            columns: columns
+            columns: columns,
+            colors: colors
           },
           axis: {
             x: {
@@ -519,7 +535,7 @@
           size: graph.size
         };
         if (graph.format) {
-          graph.chart.axis.x.tick.format = "function formatXAxis(v) { return " + graph.format + " }";
+          graph.chart.axis.x.tick.format = "function formatXAxis(v) { function DATE(s) { return d3.time.format(s)(new Date(v)); } return " + graph.format + " }";
         } else {
           graph.chart.xlabels = graph.xlabels;
           graph.chart.axis.x.tick.format = "function formatXAxis(v) { return this.xlabels[v] }";

@@ -77,10 +77,11 @@ class QuickGraph
     console.error "        -t,--title TITLE           Sets the title of the current graph"
     console.error "        -x REGEX                   Matches a new X axis value, parsed by -e, formatted with -f or -F"
     console.error "        -y REGEX                   Matches a new Y axis value, parsed by -e, formatted with -f or -F"
+    console.error "        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)"
     console.error "        -l,--legend LEGEND         Sets the legend for the current axis"
-    console.error "        -c,--consolidate FUNC      Sets the consolidation function for the current axis (sum, count, avg, min, max, last)"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
     console.error "        -f,--format CODE           Sets the code used to format an x axis value"
+    console.error "        --consolidate FUNC         Sets the consolidation function for the current axis (sum, count, avg, min, max, last)"
     console.error "        --width                    Sets the graph's width. Defaults to use the whole width of the browser."
     console.error "        --height                   Sets the graph's height. Defaults to 480."
     console.error "        -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file"
@@ -210,11 +211,18 @@ class QuickGraph
             return @fail("-l must modify an axis created with -x or -y")
           rule.legend = legend
 
-        when '-c', '--consolidate'
-          unless consolidate = args.shift()
+        when '-c', '--color'
+          unless color = args.shift()
             return @fail("-c requires an argument")
           unless rule = @currentRule(lastAxis)
             return @fail("-c must modify an axis created with -x or -y")
+          rule.color = color
+
+        when '--consolidate'
+          unless consolidate = args.shift()
+            return @fail("--consolidate requires an argument")
+          unless rule = @currentRule(lastAxis)
+            return @fail("--consolidate must modify an axis created with -x or -y")
           rule.consolidate = consolidate
 
         when '-e', '--eval', '--evaluator'
@@ -330,9 +338,13 @@ class QuickGraph
           xindices[k] = true
 
       columns = [ ['x'] ]
+      colors = {}
       for rule in graph.rules.y
         continue if @isEmptyObject(rule.buckets)
         columns.push [rule.legend]
+        if rule.color?
+          console.log "bringing yellow in"
+          colors[rule.legend] = rule.color
 
       xvalues = Object.keys(xindices).map( (e) -> parseFloat(e) ).sort (a, b) -> a - b
       for x in xvalues
@@ -356,13 +368,14 @@ class QuickGraph
           # type: 'bar'
           x: 'x'
           columns: columns
+          colors: colors
         axis:
           x:
             tick: {}
         size: graph.size
 
       if graph.format
-        graph.chart.axis.x.tick.format = "function formatXAxis(v) { return #{graph.format} }"
+        graph.chart.axis.x.tick.format = "function formatXAxis(v) { function DATE(s) { return d3.time.format(s)(new Date(v)); } return #{graph.format} }"
       else
         graph.chart.xlabels = graph.xlabels
         graph.chart.axis.x.tick.format = "function formatXAxis(v) { return this.xlabels[v] }"
