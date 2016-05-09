@@ -61,7 +61,8 @@ class QuickGraph
     @error = null
     @inputFilenames = []
     @graphs = []
-    @defaultEval = @compile("parseFloat(@V)")
+    @defaultXYEval = @compile("parseFloat(@V)")
+    @defaultNoteEval = @compile("@V")
     @DEFAULT_OUTPUT_FILENAME = "quickgraph.html"
     @outputFilename = @DEFAULT_OUTPUT_FILENAME
     @verboseEnabled = false
@@ -75,8 +76,9 @@ class QuickGraph
     console.error "        -a,--alias ALIAS           Use named alias from your home directory's .quickgraphrc"
     console.error "        -g,--graph                 Begin a new graph. This is not necessary if you're only making one"
     console.error "        -t,--title TITLE           Sets the title of the current graph"
-    console.error "        -x REGEX                   Matches a new X axis value, parsed by -e, formatted with -f or -F"
-    console.error "        -y REGEX                   Matches a new Y axis value, parsed by -e, formatted with -f or -F"
+    console.error "        -x REGEX                   Matches a new X axis value, evaluated by -e, formatted with -f or -F"
+    console.error "        -y REGEX                   Matches a new Y axis value, evaluated by -e, formatted with -f or -F"
+    console.error "        -n REGEX                   Matches a new note, evaluated by -e"
     console.error "        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)"
     console.error "        -l,--legend LEGEND         Sets the legend for the current axis"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
@@ -101,20 +103,25 @@ class QuickGraph
       rules:
         x: []
         y: []
+        n: []
       charts: []
+      notes: []
       xlabels: {}
       size:
         height: 480
     }
 
   newRule: (axis, index, regex) ->
-    return {
+    rule = {
       legend: "#{axis}#{index}"
       regex: regex
       consolidate: 'sum'
       buckets: {}
-      eval: @defaultEval
+      eval: @defaultXYEval
     }
+    if axis == 'n'
+      rule.eval = @defaultNoteEval
+    return rule
 
   currentGraph: ->
     if @graphs.length == 0
@@ -186,11 +193,11 @@ class QuickGraph
             return @fail("--height requires an argument")
           currentGraph.size.height = height
 
-        when '-x', '-y'
+        when '-x', '-y', '-n'
           axis = arg.charAt(1)
           lastAxis = axis
           unless regex = args.shift()
-            return @fail("-x requires an argument")
+            return @fail("-x, -y, and -n require an argument")
           try
             xregex = XRegExp(regex)
           catch error
@@ -288,9 +295,9 @@ class QuickGraph
 
     flatRules = []
     for graph in @graphs
-      for axis in ['x', 'y'] # Explicit ordering. x axis must always parse first
+      for axis in ['x', 'y', 'n'] # Explicit ordering. x axis must always parse first
         rules = graph.rules[axis]
-        if rules.length == 0
+        if (rules.length == 0) and (axis != 'n')
           return @fail("Graph ##{graph.index} ('#{graph.title}') has no #{axis} axis rules")
         for rule in rules
           rule.axis = axis
@@ -327,9 +334,12 @@ class QuickGraph
             if rule.axis == 'x'
               lastX = v
               lastLabel = context.V
-            else
+            else if rule.axis == 'y'
               rule.graph.xlabels[lastX] = lastLabel
               @addToBucket(rule, lastX, v)
+            else
+              rule.graph.xlabels[lastX] = lastLabel
+              rule.graph.notes.push { x: lastX, text: v }
       console.log "(#{inputFilename}) Parsed #{lineCount} lines."
 
     for graph in @graphs
@@ -341,7 +351,7 @@ class QuickGraph
           hasData = true
 
       if not hasData
-        console.log "Skipping empty graph ##{graph.index} ('#{graph.title}')"
+        console.log "* Skipping empty graph ##{graph.index} ('#{graph.title}')"
         graph.empty = true
         continue
 
@@ -368,6 +378,13 @@ class QuickGraph
       if @verboseEnabled
         console.log "(graph: #{graph.title}) Found #{xvalues.length} values for the X axis."
 
+      lines = []
+      for note in graph.notes
+        lines.push {
+          value: note.x
+          text: note.text
+        }
+
       graph.chart =
         title: graph.title
         zoom:
@@ -377,6 +394,9 @@ class QuickGraph
           x: 'x'
           columns: columns
           colors: colors
+        grid:
+          x:
+            lines: lines
         axis:
           x:
             tick: {}

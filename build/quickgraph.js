@@ -101,7 +101,8 @@
       this.error = null;
       this.inputFilenames = [];
       this.graphs = [];
-      this.defaultEval = this.compile("parseFloat(@V)");
+      this.defaultXYEval = this.compile("parseFloat(@V)");
+      this.defaultNoteEval = this.compile("@V");
       this.DEFAULT_OUTPUT_FILENAME = "quickgraph.html";
       this.outputFilename = this.DEFAULT_OUTPUT_FILENAME;
       this.verboseEnabled = false;
@@ -116,8 +117,9 @@
       console.error("        -a,--alias ALIAS           Use named alias from your home directory's .quickgraphrc");
       console.error("        -g,--graph                 Begin a new graph. This is not necessary if you're only making one");
       console.error("        -t,--title TITLE           Sets the title of the current graph");
-      console.error("        -x REGEX                   Matches a new X axis value, parsed by -e, formatted with -f or -F");
-      console.error("        -y REGEX                   Matches a new Y axis value, parsed by -e, formatted with -f or -F");
+      console.error("        -x REGEX                   Matches a new X axis value, evaluated by -e, formatted with -f or -F");
+      console.error("        -y REGEX                   Matches a new Y axis value, evaluated by -e, formatted with -f or -F");
+      console.error("        -n REGEX                   Matches a new note, evaluated by -e");
       console.error("        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)");
       console.error("        -l,--legend LEGEND         Sets the legend for the current axis");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
@@ -145,9 +147,11 @@
         title: "",
         rules: {
           x: [],
-          y: []
+          y: [],
+          n: []
         },
         charts: [],
+        notes: [],
         xlabels: {},
         size: {
           height: 480
@@ -156,13 +160,18 @@
     };
 
     QuickGraph.prototype.newRule = function(axis, index, regex) {
-      return {
+      var rule;
+      rule = {
         legend: "" + axis + index,
         regex: regex,
         consolidate: 'sum',
         buckets: {},
-        "eval": this.defaultEval
+        "eval": this.defaultXYEval
       };
+      if (axis === 'n') {
+        rule["eval"] = this.defaultNoteEval;
+      }
+      return rule;
     };
 
     QuickGraph.prototype.currentGraph = function() {
@@ -260,10 +269,11 @@
             break;
           case '-x':
           case '-y':
+          case '-n':
             axis = arg.charAt(1);
             lastAxis = axis;
             if (!(regex = args.shift())) {
-              return this.fail("-x requires an argument");
+              return this.fail("-x, -y, and -n require an argument");
             }
             try {
               xregex = XRegExp(regex);
@@ -381,7 +391,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, m, matches, n, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, rule, rules, s, t, u, v, w, x, xindices, xvalues;
+      var axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len12, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, n, note, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -399,11 +409,11 @@
       ref1 = this.graphs;
       for (l = 0, len1 = ref1.length; l < len1; l++) {
         graph = ref1[l];
-        ref2 = ['x', 'y'];
+        ref2 = ['x', 'y', 'n'];
         for (m = 0, len2 = ref2.length; m < len2; m++) {
           axis = ref2[m];
           rules = graph.rules[axis];
-          if (rules.length === 0) {
+          if ((rules.length === 0) && (axis !== 'n')) {
             return this.fail("Graph #" + graph.index + " ('" + graph.title + "') has no " + axis + " axis rules");
           }
           for (n = 0, len3 = rules.length; n < len3; n++) {
@@ -459,9 +469,15 @@
               if (rule.axis === 'x') {
                 lastX = v;
                 lastLabel = context.V;
-              } else {
+              } else if (rule.axis === 'y') {
                 rule.graph.xlabels[lastX] = lastLabel;
                 this.addToBucket(rule, lastX, v);
+              } else {
+                rule.graph.xlabels[lastX] = lastLabel;
+                rule.graph.notes.push({
+                  x: lastX,
+                  text: v
+                });
               }
             }
           }
@@ -482,7 +498,7 @@
           }
         }
         if (!hasData) {
-          console.log("Skipping empty graph #" + graph.index + " ('" + graph.title + "')");
+          console.log("* Skipping empty graph #" + graph.index + " ('" + graph.title + "')");
           graph.empty = true;
           continue;
         }
@@ -525,6 +541,15 @@
         if (this.verboseEnabled) {
           console.log("(graph: " + graph.title + ") Found " + xvalues.length + " values for the X axis.");
         }
+        lines = [];
+        ref8 = graph.notes;
+        for (z = 0, len12 = ref8.length; z < len12; z++) {
+          note = ref8[z];
+          lines.push({
+            value: note.x,
+            text: note.text
+          });
+        }
         graph.chart = {
           title: graph.title,
           zoom: {
@@ -534,6 +559,11 @@
             x: 'x',
             columns: columns,
             colors: colors
+          },
+          grid: {
+            x: {
+              lines: lines
+            }
           },
           axis: {
             x: {
