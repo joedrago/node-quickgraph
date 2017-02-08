@@ -582,7 +582,8 @@
         graph.chart = {
           title: graph.title,
           zoom: {
-            enabled: true
+            enabled: true,
+            rescale: true
           },
           data: {
             x: 'x',

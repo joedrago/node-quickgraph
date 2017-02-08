@@ -408,6 +408,7 @@ class QuickGraph
         title: graph.title
         zoom:
           enabled: true
+          rescale: true
         data:
           # type: 'bar'
           x: 'x'
