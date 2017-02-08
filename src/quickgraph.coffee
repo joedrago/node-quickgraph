@@ -82,6 +82,7 @@ class QuickGraph
     console.error "        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)"
     console.error "        -l,--legend LEGEND         Sets the legend for the current axis"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
+    console.error "        -w,--where CODE            Sets the where clause for the axis value; returning true keeps the value"
     console.error "        -f,--format CODE           Sets the code used to format an x axis value"
     console.error "        --consolidate FUNC         Sets the consolidation function for the current axis (sum, count, avg, min, max, last)"
     console.error "        --width                    Sets the graph's width. Defaults to use the whole width of the browser."
@@ -118,6 +119,7 @@ class QuickGraph
       consolidate: 'sum'
       buckets: {}
       eval: @defaultXYEval
+      where: null
     }
     if axis == 'n'
       rule.eval = @defaultNoteEval
@@ -240,6 +242,13 @@ class QuickGraph
             return @fail("-e must modify an axis created with -x or -y")
           rule.eval = @compile(evaluator)
 
+        when '-w', '--where'
+          unless where = args.shift()
+            return @fail("-w requires an argument")
+          unless rule = @currentRule(lastAxis)
+            return @fail("-w must modify an axis created with -x or -y")
+          rule.where = @compile(where)
+
         else
           if matches = arg.match(/^@(.+)/)
             responseFilename = matches[1]
@@ -331,6 +340,16 @@ class QuickGraph
             v = @evalInContext(rule.eval, context)
             if @verboseEnabled
               console.log "result: #{v}"
+            if rule.where != null
+              context = { V: v, X: lastX }
+              if @verboseEnabled
+                console.log "running #{rule.axis} where clause, context: ", context
+                console.log "Running JS:\n#{rule.where}"
+              allow = @evalInContext(rule.where, context)
+              if @verboseEnabled
+                console.log "allow: #{allow}"
+              if allow == false
+                continue
             if rule.axis == 'x'
               lastX = v
               lastLabel = context.V

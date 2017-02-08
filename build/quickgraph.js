@@ -123,6 +123,7 @@
       console.error("        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)");
       console.error("        -l,--legend LEGEND         Sets the legend for the current axis");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
+      console.error("        -w,--where CODE            Sets the where clause for the axis value; returning true keeps the value");
       console.error("        -f,--format CODE           Sets the code used to format an x axis value");
       console.error("        --consolidate FUNC         Sets the consolidation function for the current axis (sum, count, avg, min, max, last)");
       console.error("        --width                    Sets the graph's width. Defaults to use the whole width of the browser.");
@@ -166,7 +167,8 @@
         regex: regex,
         consolidate: 'sum',
         buckets: {},
-        "eval": this.defaultXYEval
+        "eval": this.defaultXYEval,
+        where: null
       };
       if (axis === 'n') {
         rule["eval"] = this.defaultNoteEval;
@@ -191,7 +193,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, color, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, width, xregex;
+      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, color, consolidate, currentGraph, error, error1, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, where, width, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -333,6 +335,16 @@
             }
             rule["eval"] = this.compile(evaluator);
             break;
+          case '-w':
+          case '--where':
+            if (!(where = args.shift())) {
+              return this.fail("-w requires an argument");
+            }
+            if (!(rule = this.currentRule(lastAxis))) {
+              return this.fail("-w must modify an axis created with -x or -y");
+            }
+            rule.where = this.compile(where);
+            break;
           default:
             if (matches = arg.match(/^@(.+)/)) {
               responseFilename = matches[1];
@@ -391,7 +403,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len12, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, n, note, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
+      var allow, axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, inputFilename, j, k, l, lastLabel, lastX, len, len1, len10, len11, len12, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, n, note, o, p, q, r, reader, ref, ref1, ref2, ref3, ref4, ref5, ref6, ref7, ref8, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -465,6 +477,23 @@
               v = this.evalInContext(rule["eval"], context);
               if (this.verboseEnabled) {
                 console.log("result: " + v);
+              }
+              if (rule.where !== null) {
+                context = {
+                  V: v,
+                  X: lastX
+                };
+                if (this.verboseEnabled) {
+                  console.log("running " + rule.axis + " where clause, context: ", context);
+                  console.log("Running JS:\n" + rule.where);
+                }
+                allow = this.evalInContext(rule.where, context);
+                if (this.verboseEnabled) {
+                  console.log("allow: " + allow);
+                }
+                if (allow === false) {
+                  continue;
+                }
               }
               if (rule.axis === 'x') {
                 lastX = v;
