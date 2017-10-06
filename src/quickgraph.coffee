@@ -66,6 +66,7 @@ class QuickGraph
     @DEFAULT_OUTPUT_FILENAME = "quickgraph.html"
     @outputFilename = @DEFAULT_OUTPUT_FILENAME
     @verboseEnabled = false
+    @commonDomain = false
 
   syntax: ->
     console.error "Syntax: qg [options] logfile [... logfile]"
@@ -88,6 +89,7 @@ class QuickGraph
     console.error "        --width                    Sets the graph's width. Defaults to use the whole width of the browser."
     console.error "        --height                   Sets the graph's height. Defaults to 480."
     console.error "        -A RESTOFLINE              Create a new alias (like in quickgraphrc) statement; only works in a response file"
+    console.error "        -d,--domain                Makes all graphs share a common domain"
     return
 
   compile: (func) ->
@@ -147,6 +149,9 @@ class QuickGraph
         when '-v', '--verbose'
           console.log "Verbose mode enabled."
           @verboseEnabled = true
+
+        when '-d', '--domain'
+          @commonDomain = true
 
         when '-o', '--output'
           unless output = args.shift()
@@ -361,6 +366,29 @@ class QuickGraph
               rule.graph.notes.push { x: lastX, text: v }
       console.log "(#{inputFilename}) Parsed #{lineCount} lines."
 
+    minX = null
+    maxX = null
+    if @commonDomain
+      # Walk all graphs, finding the min/max domain, so we can ensure they match on all graphs
+      for graph in @graphs
+        xindices = {}
+        hasData = false
+        for rule in graph.rules.y
+          for k of rule.buckets
+            xindices[k] = true
+            hasData = true
+        if not hasData
+          continue
+        xvalues = Object.keys(xindices).map( (e) -> parseFloat(e) ).sort (a, b) -> a - b
+        for x in xvalues
+          if (minX == null) or (minX > x)
+            minX = x
+          if (maxX == null) or (maxX < x)
+            maxX = x
+
+      if @verboseEnabled
+        console.log "Choosing common domain (#{minX}, #{maxX})"
+
     for graph in @graphs
       xindices = {}
       hasData = false
@@ -381,6 +409,10 @@ class QuickGraph
         columns.push [rule.legend]
         if rule.color?
           colors[rule.legend] = rule.color
+
+      if (minX != null) and (maxX != null)
+        xindices[minX] = true
+        xindices[maxX] = true
 
       xvalues = Object.keys(xindices).map( (e) -> parseFloat(e) ).sort (a, b) -> a - b
       for x in xvalues
