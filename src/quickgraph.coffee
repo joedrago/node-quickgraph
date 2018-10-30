@@ -120,6 +120,7 @@ class QuickGraph
       regex: regex
       consolidate: 'sum'
       buckets: {}
+      hasBucket: false
       eval: @defaultXYEval
       where: null
     }
@@ -287,11 +288,7 @@ class QuickGraph
   addToBucket: (rule, x, y) ->
     rule.buckets[x] ?= new Bucket()
     rule.buckets[x].add(y)
-
-  isEmptyObject: (obj) ->
-    for k of obj
-      return false
-    return true
+    rule.hasBucket = true
 
   execute: ->
     # Validation
@@ -405,7 +402,7 @@ class QuickGraph
       columns = [ ['x'] ]
       colors = {}
       for rule in graph.rules.y
-        continue if @isEmptyObject(rule.buckets)
+        continue if not rule.hasBucket
         columns.push [rule.legend]
         if rule.color?
           colors[rule.legend] = rule.color
@@ -419,7 +416,7 @@ class QuickGraph
         columnIndex = 0
         columns[columnIndex].push x
         for rule in graph.rules.y
-          continue if @isEmptyObject(rule.buckets)
+          continue if not rule.hasBucket
           columnIndex += 1
           v = 0
           if rule.buckets[x]?

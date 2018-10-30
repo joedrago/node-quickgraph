@@ -169,6 +169,7 @@
         regex: regex,
         consolidate: 'sum',
         buckets: {},
+        hasBucket: false,
         "eval": this.defaultXYEval,
         where: null
       };
@@ -397,15 +398,8 @@
       if ((base = rule.buckets)[x] == null) {
         base[x] = new Bucket();
       }
-      return rule.buckets[x].add(y);
-    };
-
-    QuickGraph.prototype.isEmptyObject = function(obj) {
-      var k;
-      for (k in obj) {
-        return false;
-      }
-      return true;
+      rule.buckets[x].add(y);
+      return rule.hasBucket = true;
     };
 
     QuickGraph.prototype.execute = function() {
@@ -580,7 +574,7 @@
         ref8 = graph.rules.y;
         for (z = 0, len12 = ref8.length; z < len12; z++) {
           rule = ref8[z];
-          if (this.isEmptyObject(rule.buckets)) {
+          if (!rule.hasBucket) {
             continue;
           }
           columns.push([rule.legend]);
@@ -604,7 +598,7 @@
           ref9 = graph.rules.y;
           for (j1 = 0, len14 = ref9.length; j1 < len14; j1++) {
             rule = ref9[j1];
-            if (this.isEmptyObject(rule.buckets)) {
+            if (!rule.hasBucket) {
               continue;
             }
             columnIndex += 1;
