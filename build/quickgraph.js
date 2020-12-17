@@ -415,7 +415,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var allow, axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, i1, inputFilename, j, j1, k, k1, l, lastLabel, lastX, len, len1, len10, len11, len12, len13, len14, len15, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, maxX, minX, mutexes, n, note, o, p, q, r, reader, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
+      var allow, axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, i1, inputFilename, j, j1, k, k1, l, l1, lastLabel, lastX, len, len1, len10, len11, len12, len13, len14, len15, len16, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, maxX, minX, mutexes, n, note, o, p, q, r, reader, ref, ref1, ref10, ref11, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -461,20 +461,19 @@
             console.log("(" + inputFilename + ") Parsed " + lineCount + " lines.");
           }
           mutexes = {};
-          for (p = 0, len5 = flatRules.length; p < len5; p++) {
-            rule = flatRules[p];
-            if ((rule.mutex != null) && mutexes[rule.mutex]) {
-              continue;
-            }
+          ref4 = this.graphs;
+          for (p = 0, len5 = ref4.length; p < len5; p++) {
+            graph = ref4[p];
+            mutexes[graph.index] = {};
+          }
+          for (q = 0, len6 = flatRules.length; q < len6; q++) {
+            rule = flatRules[q];
             if (matches = XRegExp.exec(line, rule.regex)) {
-              if (rule.mutex != null) {
-                mutexes[rule.mutex] = true;
-              }
               context = {
                 V: matches[0],
                 f: {}
               };
-              for (i = q = 0, len6 = matches.length; q < len6; i = ++q) {
+              for (i = r = 0, len7 = matches.length; r < len7; i = ++r) {
                 v = matches[i];
                 if ((matches.length === 2) && (i === 1)) {
                   context.V = v;
@@ -514,6 +513,12 @@
                   continue;
                 }
               }
+              if (rule.mutex != null) {
+                if (mutexes[rule.graph.index][rule.mutex] != null) {
+                  continue;
+                }
+                mutexes[rule.graph.index][rule.mutex] = true;
+              }
               if (rule.axis === 'x') {
                 lastX = v;
                 lastLabel = context.V;
@@ -535,14 +540,14 @@
       minX = null;
       maxX = null;
       if (this.commonDomain) {
-        ref4 = this.graphs;
-        for (r = 0, len7 = ref4.length; r < len7; r++) {
-          graph = ref4[r];
+        ref5 = this.graphs;
+        for (s = 0, len8 = ref5.length; s < len8; s++) {
+          graph = ref5[s];
           xindices = {};
           hasData = false;
-          ref5 = graph.rules.y;
-          for (s = 0, len8 = ref5.length; s < len8; s++) {
-            rule = ref5[s];
+          ref6 = graph.rules.y;
+          for (t = 0, len9 = ref6.length; t < len9; t++) {
+            rule = ref6[t];
             for (k in rule.buckets) {
               xindices[k] = true;
               hasData = true;
@@ -556,8 +561,8 @@
           }).sort(function(a, b) {
             return a - b;
           });
-          for (t = 0, len9 = xvalues.length; t < len9; t++) {
-            x = xvalues[t];
+          for (u = 0, len10 = xvalues.length; u < len10; u++) {
+            x = xvalues[u];
             if ((minX === null) || (minX > x)) {
               minX = x;
             }
@@ -570,14 +575,14 @@
           console.log("Choosing common domain (" + minX + ", " + maxX + ")");
         }
       }
-      ref6 = this.graphs;
-      for (u = 0, len10 = ref6.length; u < len10; u++) {
-        graph = ref6[u];
+      ref7 = this.graphs;
+      for (w = 0, len11 = ref7.length; w < len11; w++) {
+        graph = ref7[w];
         xindices = {};
         hasData = false;
-        ref7 = graph.rules.y;
-        for (w = 0, len11 = ref7.length; w < len11; w++) {
-          rule = ref7[w];
+        ref8 = graph.rules.y;
+        for (z = 0, len12 = ref8.length; z < len12; z++) {
+          rule = ref8[z];
           for (k in rule.buckets) {
             xindices[k] = true;
             hasData = true;
@@ -590,9 +595,9 @@
         }
         columns = [['x']];
         colors = {};
-        ref8 = graph.rules.y;
-        for (z = 0, len12 = ref8.length; z < len12; z++) {
-          rule = ref8[z];
+        ref9 = graph.rules.y;
+        for (i1 = 0, len13 = ref9.length; i1 < len13; i1++) {
+          rule = ref9[i1];
           if (!rule.hasBucket) {
             continue;
           }
@@ -610,13 +615,13 @@
         }).sort(function(a, b) {
           return a - b;
         });
-        for (i1 = 0, len13 = xvalues.length; i1 < len13; i1++) {
-          x = xvalues[i1];
+        for (j1 = 0, len14 = xvalues.length; j1 < len14; j1++) {
+          x = xvalues[j1];
           columnIndex = 0;
           columns[columnIndex].push(x);
-          ref9 = graph.rules.y;
-          for (j1 = 0, len14 = ref9.length; j1 < len14; j1++) {
-            rule = ref9[j1];
+          ref10 = graph.rules.y;
+          for (k1 = 0, len15 = ref10.length; k1 < len15; k1++) {
+            rule = ref10[k1];
             if (!rule.hasBucket) {
               continue;
             }
@@ -632,9 +637,9 @@
           console.log("(graph: " + graph.title + ") Found " + xvalues.length + " values for the X axis.");
         }
         lines = [];
-        ref10 = graph.notes;
-        for (k1 = 0, len15 = ref10.length; k1 < len15; k1++) {
-          note = ref10[k1];
+        ref11 = graph.notes;
+        for (l1 = 0, len16 = ref11.length; l1 < len16; l1++) {
+          note = ref11[l1];
           lines.push({
             value: note.x,
             text: note.text

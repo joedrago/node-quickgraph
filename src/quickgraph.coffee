@@ -334,13 +334,10 @@ class QuickGraph
         if (lineCount % 100000) == 0
           console.log "(#{inputFilename}) Parsed #{lineCount} lines."
         mutexes = {}
+        for graph in @graphs
+          mutexes[graph.index] = {}
         for rule in flatRules
-          if rule.mutex? and mutexes[rule.mutex]
-            # Another rule sharing this mutex already matched, skip it
-            continue
           if matches = XRegExp.exec(line, rule.regex)
-            if rule.mutex?
-              mutexes[rule.mutex] = true
             context = { V: matches[0], f: {} }
             for v, i in matches
               if (matches.length == 2) and (i == 1)
@@ -367,6 +364,13 @@ class QuickGraph
                 console.log "allow: #{allow}"
               if allow == false
                 continue
+
+            if rule.mutex?
+              if mutexes[rule.graph.index][rule.mutex]?
+                # Another rule on this graph sharing this mutex already matched, skip it
+                continue
+              mutexes[rule.graph.index][rule.mutex] = true
+
             if rule.axis == 'x'
               lastX = v
               lastLabel = context.V
