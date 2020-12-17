@@ -478,7 +478,7 @@ class QuickGraph
         size: graph.size
 
       if graph.format
-        graph.chart.axis.x.tick.format = "function formatXAxis(v) { function DATE(s) { return d3.time.format(s)(new Date(v)); } return #{graph.format} }"
+        graph.chart.axis.x.tick.format = "function formatXAxis(v) { function DATE(s) { return d3.timeFormat(s)(new Date(v)); } return #{graph.format} }"
       else
         graph.chart.xlabels = graph.xlabels
         graph.chart.axis.x.tick.format = "function formatXAxis(v) { return this.xlabels[v] }"
@@ -504,9 +504,9 @@ class QuickGraph
     html = """
       <html>
       <head>
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.css" rel="stylesheet" type="text/css">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.16/d3.min.js" charset="utf-8"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.4.10/c3.min.js"></script>
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.css" rel="stylesheet" type="text/css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js" charset="utf-8"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/c3/0.7.20/c3.min.js"></script>
       </head>
       <style>
         .title {
