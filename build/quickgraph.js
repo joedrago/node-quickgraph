@@ -123,6 +123,7 @@
       console.error("        -n REGEX                   Matches a new note, evaluated by -e");
       console.error("        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)");
       console.error("        -m,--mutex MUTEX           Sets the mutex (mutually exclusive tag) for this rule of which only the first in a set matches");
+      console.error("        -i,--invisible             Creates an invisible rule, useful alongside --mutex");
       console.error("        -l,--legend LEGEND         Sets the legend for the current axis");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
       console.error("        -w,--where CODE            Sets the where clause for the axis value; returning true keeps the value");
@@ -171,6 +172,7 @@
         consolidate: 'sum',
         buckets: {},
         hasBucket: false,
+        visible: true,
         "eval": this.defaultXYEval,
         mutex: null,
         where: null
@@ -333,6 +335,13 @@
               return this.fail("-m must modify an axis created with -x or -y");
             }
             rule.mutex = mutex;
+            break;
+          case '-i':
+          case '--invisible':
+            if (!(rule = this.currentRule(lastAxis))) {
+              return this.fail("-i must modify an axis created with -x or -y");
+            }
+            rule.visible = false;
             break;
           case '--consolidate':
             if (!(consolidate = args.shift())) {
@@ -598,7 +607,7 @@
         ref9 = graph.rules.y;
         for (i1 = 0, len13 = ref9.length; i1 < len13; i1++) {
           rule = ref9[i1];
-          if (!rule.hasBucket) {
+          if (!rule.hasBucket || !rule.visible) {
             continue;
           }
           columns.push([rule.legend]);
@@ -622,7 +631,7 @@
           ref10 = graph.rules.y;
           for (k1 = 0, len15 = ref10.length; k1 < len15; k1++) {
             rule = ref10[k1];
-            if (!rule.hasBucket) {
+            if (!rule.hasBucket || !rule.visible) {
               continue;
             }
             columnIndex += 1;

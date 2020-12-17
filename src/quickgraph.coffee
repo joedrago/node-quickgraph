@@ -82,6 +82,7 @@ class QuickGraph
     console.error "        -n REGEX                   Matches a new note, evaluated by -e"
     console.error "        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)"
     console.error "        -m,--mutex MUTEX           Sets the mutex (mutually exclusive tag) for this rule of which only the first in a set matches"
+    console.error "        -i,--invisible             Creates an invisible rule, useful alongside --mutex"
     console.error "        -l,--legend LEGEND         Sets the legend for the current axis"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
     console.error "        -w,--where CODE            Sets the where clause for the axis value; returning true keeps the value"
@@ -122,6 +123,7 @@ class QuickGraph
       consolidate: 'sum'
       buckets: {}
       hasBucket: false
+      visible: true
       eval: @defaultXYEval
       mutex: null
       where: null
@@ -242,6 +244,11 @@ class QuickGraph
           unless rule = @currentRule(lastAxis)
             return @fail("-m must modify an axis created with -x or -y")
           rule.mutex = mutex
+
+        when '-i', '--invisible'
+          unless rule = @currentRule(lastAxis)
+            return @fail("-i must modify an axis created with -x or -y")
+          rule.visible = false
 
         when '--consolidate'
           unless consolidate = args.shift()
@@ -421,7 +428,7 @@ class QuickGraph
       columns = [ ['x'] ]
       colors = {}
       for rule in graph.rules.y
-        continue if not rule.hasBucket
+        continue if not rule.hasBucket or not rule.visible
         columns.push [rule.legend]
         if rule.color?
           colors[rule.legend] = rule.color
@@ -435,7 +442,7 @@ class QuickGraph
         columnIndex = 0
         columns[columnIndex].push x
         for rule in graph.rules.y
-          continue if not rule.hasBucket
+          continue if not rule.hasBucket or not rule.visible
           columnIndex += 1
           v = 0
           if rule.buckets[x]?
