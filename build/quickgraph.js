@@ -122,6 +122,7 @@
       console.error("        -y REGEX                   Matches a new Y axis value, evaluated by -e, formatted with -f or -F");
       console.error("        -n REGEX                   Matches a new note, evaluated by -e");
       console.error("        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)");
+      console.error("        -m,--mutex MUTEX           Sets the mutex (mutually exclusive tag) for this rule of which only the first in a set matches");
       console.error("        -l,--legend LEGEND         Sets the legend for the current axis");
       console.error("        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples");
       console.error("        -w,--where CODE            Sets the where clause for the axis value; returning true keeps the value");
@@ -171,6 +172,7 @@
         buckets: {},
         hasBucket: false,
         "eval": this.defaultXYEval,
+        mutex: null,
         where: null
       };
       if (axis === 'n') {
@@ -196,7 +198,7 @@
     };
 
     QuickGraph.prototype.parseArguments = function(args) {
-      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, color, consolidate, currentGraph, error, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, where, width, xregex;
+      var alias, aliasArgs, aliasLine, aliasList, arg, argsLine, axis, color, consolidate, currentGraph, error, evaluator, extraArgs, format, height, j, l, lastAxis, legend, len, len1, len2, len3, m, matches, mutex, n, output, parsedArgs, regex, responseFileReader, responseFilename, rule, spaces, spacesToCreate, title, where, width, xregex;
       lastAxis = 'x';
       while (arg = args.shift()) {
         switch (arg) {
@@ -322,6 +324,16 @@
             }
             rule.color = color;
             break;
+          case '-m':
+          case '--mutex':
+            if (!(mutex = args.shift())) {
+              return this.fail("-m requires an argument");
+            }
+            if (!(rule = this.currentRule(lastAxis))) {
+              return this.fail("-m must modify an axis created with -x or -y");
+            }
+            rule.mutex = mutex;
+            break;
           case '--consolidate':
             if (!(consolidate = args.shift())) {
               return this.fail("--consolidate requires an argument");
@@ -403,7 +415,7 @@
     };
 
     QuickGraph.prototype.execute = function() {
-      var allow, axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, i1, inputFilename, j, j1, k, k1, l, lastLabel, lastX, len, len1, len10, len11, len12, len13, len14, len15, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, maxX, minX, n, note, o, p, q, r, reader, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
+      var allow, axis, colors, columnIndex, columns, context, flatRules, graph, hasData, i, i1, inputFilename, j, j1, k, k1, l, lastLabel, lastX, len, len1, len10, len11, len12, len13, len14, len15, len2, len3, len4, len5, len6, len7, len8, len9, line, lineCount, lines, m, matches, maxX, minX, mutexes, n, note, o, p, q, r, reader, ref, ref1, ref10, ref2, ref3, ref4, ref5, ref6, ref7, ref8, ref9, rule, rules, s, t, u, v, w, x, xindices, xvalues, z;
       if (this.inputFilenames.length < 1) {
         return this.fail("no filenames to read");
       }
@@ -448,9 +460,16 @@
           if ((lineCount % 100000) === 0) {
             console.log("(" + inputFilename + ") Parsed " + lineCount + " lines.");
           }
+          mutexes = {};
           for (p = 0, len5 = flatRules.length; p < len5; p++) {
             rule = flatRules[p];
+            if ((rule.mutex != null) && mutexes[rule.mutex]) {
+              continue;
+            }
             if (matches = XRegExp.exec(line, rule.regex)) {
+              if (rule.mutex != null) {
+                mutexes[rule.mutex] = true;
+              }
               context = {
                 V: matches[0],
                 f: {}

@@ -81,6 +81,7 @@ class QuickGraph
     console.error "        -y REGEX                   Matches a new Y axis value, evaluated by -e, formatted with -f or -F"
     console.error "        -n REGEX                   Matches a new note, evaluated by -e"
     console.error "        -c,--color COLOR           Sets the color for the current rule (only makes sense on Y axis rules)"
+    console.error "        -m,--mutex MUTEX           Sets the mutex (mutually exclusive tag) for this rule of which only the first in a set matches"
     console.error "        -l,--legend LEGEND         Sets the legend for the current axis"
     console.error "        -e,--eval CODE             Sets the evaluator for the axis regex's output. See examples"
     console.error "        -w,--where CODE            Sets the where clause for the axis value; returning true keeps the value"
@@ -122,6 +123,7 @@ class QuickGraph
       buckets: {}
       hasBucket: false
       eval: @defaultXYEval
+      mutex: null
       where: null
     }
     if axis == 'n'
@@ -234,6 +236,13 @@ class QuickGraph
             return @fail("-c must modify an axis created with -x or -y")
           rule.color = color
 
+        when '-m', '--mutex'
+          unless mutex = args.shift()
+            return @fail("-m requires an argument")
+          unless rule = @currentRule(lastAxis)
+            return @fail("-m must modify an axis created with -x or -y")
+          rule.mutex = mutex
+
         when '--consolidate'
           unless consolidate = args.shift()
             return @fail("--consolidate requires an argument")
@@ -324,8 +333,14 @@ class QuickGraph
         lineCount += 1
         if (lineCount % 100000) == 0
           console.log "(#{inputFilename}) Parsed #{lineCount} lines."
+        mutexes = {}
         for rule in flatRules
+          if rule.mutex? and mutexes[rule.mutex]
+            # Another rule sharing this mutex already matched, skip it
+            continue
           if matches = XRegExp.exec(line, rule.regex)
+            if rule.mutex?
+              mutexes[rule.mutex] = true
             context = { V: matches[0], f: {} }
             for v, i in matches
               if (matches.length == 2) and (i == 1)
